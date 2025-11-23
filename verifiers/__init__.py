@@ -28,6 +28,7 @@ from .parsers.xml_parser import XMLParser
 from .rubrics.judge_rubric import JudgeRubric
 from .rubrics.rubric_group import RubricGroup
 from .rubrics.tool_rubric import ToolRubric
+from .rubrics.document_retrieval_rubric import DocumentRetrievalRubric
 from .utils.data_utils import (
     extract_boxed_answer,
     extract_hash_answer,
@@ -84,6 +85,7 @@ __all__ = [
     "RubricGroup",
     "ToolRubric",
     "MathRubric",
+    "DocumentRetrievalRubric",
     "TextArenaEnv",
     "ReasoningGymEnv",
     "Environment",
