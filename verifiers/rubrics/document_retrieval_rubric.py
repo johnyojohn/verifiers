@@ -70,18 +70,18 @@ class DocumentRetrievalRubric(Rubric):
 
     def _get_target_docs(self, state: State) -> list[str]:
         """Extract target document IDs from state.
-        
+
         Access state["info"][target_key] where your dataset's "info" column data is stored.
         State's forwarding automatically handles state["info"] → state["input"]["info"].
         """
         target_docs = []
-        
+
         # Use .get() to leverage State's forwarding behavior
         # state["info"] automatically forwards to state["input"]["info"]
         info = state.get("info")
         if isinstance(info, dict):
             target_docs = info.get(self.target_key, [])
-        
+
         # Convert to list if needed
         if not isinstance(target_docs, list):
             if target_docs:  # Only warn if non-empty
