@@ -15,8 +15,9 @@ class DocumentRetrievalRubric(Rubric):
     Args:
         tool: Tool that retrieves documents.
         arg_name: Name of the argument containing the document ID (e.g., "section_id").
-        target_key: Column name in your dataset containing target document IDs (default: "target_documents").
-            The rubric will automatically find it in state["input"][target_key], state[target_key], or state["info"][target_key].
+        target_key: Key name for target document IDs (default: "target_documents").
+            Recommended: Add an "info" column to your dataset with target docs nested inside.
+            The rubric checks: state["info"][target_key] (recommended), then state["input"][target_key], then state[target_key].
         document_id_parser: Function to parse the document ID from the argument.(default: lambda x: x.split(":")[0])
     """
 
@@ -59,7 +60,9 @@ class DocumentRetrievalRubric(Rubric):
                                 )
                                 args = json.loads(args_str)
                                 if self.arg_name in args:
-                                    doc_id = self.document_id_parser(args[self.arg_name])
+                                    doc_id = self.document_id_parser(
+                                        args[self.arg_name]
+                                    )
                                     retrieved.append(doc_id)
                             except (json.JSONDecodeError, KeyError):
                                 continue
@@ -68,34 +71,27 @@ class DocumentRetrievalRubric(Rubric):
     def _get_target_docs(self, state: State) -> list[str]:
         """Extract target document IDs from state.
         
-        Checks multiple locations:
-        1. state["input"][target_key] - where dataset columns are stored
-        2. state[target_key] - top-level (backward compat)
-        3. state["info"][target_key] - nested under info dict
+        Access state["info"][target_key] where your dataset's "info" column data is stored.
+        State's forwarding automatically handles state["info"] → state["input"]["info"].
         """
         target_docs = []
         
-        # Priority 1: Check state["input"] (where dataset columns live)
-        if "input" in state and isinstance(state["input"], dict):
-            if self.target_key in state["input"]:
-                target_docs = state["input"].get(self.target_key, [])
-        
-        # Priority 2: Check top-level state (backward compat)
-        if not target_docs and self.target_key in state:
-            target_docs = state.get(self.target_key, [])
-        
-        # Priority 3: Check nested under info
-        if not target_docs and "info" in state and isinstance(state["info"], dict):
-            target_docs = state["info"].get(self.target_key, [])
+        # Use .get() to leverage State's forwarding behavior
+        # state["info"] automatically forwards to state["input"]["info"]
+        info = state.get("info")
+        if isinstance(info, dict):
+            target_docs = info.get(self.target_key, [])
         
         # Convert to list if needed
         if not isinstance(target_docs, list):
             if target_docs:  # Only warn if non-empty
-                self.logger.warning(f"Target documents must be a list, got {type(target_docs)}. Converting to list.")
+                self.logger.warning(
+                    f"Target documents must be a list, got {type(target_docs)}. Converting to list."
+                )
                 target_docs = [target_docs]
             else:
                 target_docs = []
-        
+
         # Apply document ID parser to each target
         result = [self.document_id_parser(doc) for doc in target_docs]
         return result
@@ -131,4 +127,3 @@ class DocumentRetrievalRubric(Rubric):
 
         overlap = len(retrieved & target)
         return float(overlap) / len(retrieved)
-
